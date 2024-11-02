@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "调试 producer",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/producer",
+            "args": ["1"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用漂亮打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "编译 producer",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "console": "integratedTerminal"
+        }
+    ]
+}
