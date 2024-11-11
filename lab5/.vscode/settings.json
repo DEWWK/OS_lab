@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.fs": "glsl",
+        "unistd.h": "c"
+    }
+}

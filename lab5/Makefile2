@@ -1,0 +1,26 @@
+hdrs = ipc_.h
+c_src = cutter.c ipc_.c
+c_obj = cutter.o ipc_.o
+r_src = room_sofa.c ipc_.c
+r_obj = room_sofa.o ipc_.o
+s_src = cstm_room.c ipc_.c
+s_obj = cstm_room.o ipc_.o
+opts = -g -c
+all: cutter room_sofa cstm_room
+cutter: $(c_obj)
+	gcc $(c_obj) -o cutter
+cutter.o: $(c_src) $(hdrs)
+	gcc $(opts) $(c_src)
+
+room_sofa: $(r_obj)
+	gcc $(r_obj) -o room_sofa
+room_sofa.o: $(r_src) $(hdrs)
+	gcc $(opts) $(r_src)
+
+cstm_room: $(s_obj)
+	gcc $(s_obj) -o cstm_room
+cstm_room.o: $(s_src) $(hdrs)
+	gcc $(opts) $(s_src)
+
+clean:
+	rm cutter room_sofa cstm_room *.o
