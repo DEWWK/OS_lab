@@ -17,6 +17,7 @@ int main(int argc, char* argv[])
     sem_flg = IPC_CREAT | 0644;
     sem_val = 1;
     mtx_sem = set_sem(mtx_key, sem_val, sem_flg);
+    int val = semctl(mtx_sem, 0, GETVAL);
 
     sofa_flg = IPC_CREAT | 0644;
     sofa_key = 201;
