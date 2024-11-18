@@ -107,10 +107,41 @@ void dp::pickup_n(int i)
     std::cout << "n" << i + 1 << "获得锁 " << std::endl;
     
     *state_n[i] = waiting;
+    
+    bool need_wait = false;
+    for (int j = 0; j < NUM; j ++ )
+    {
+        if (*state_s[j] == waiting)
+        {   
+            need_wait = true;
+            break;
+        }
+    }
+    if (need_wait)
+    {   
+        std::cout << "n" << i + 1 << "先让南车运行, 暂时释放锁" << std::endl;
+        lock->open_lock();
+        *state_n[i] = wantingLock;
+        sleep(rate);
+        while (1)
+        {
+            bool can_get_lock = true;
+            for (int j = 0; j < i; j ++ )
+            {
+                if (*state_n[j] == wantingLock)
+                    can_get_lock = false;
+            }
+            if (can_get_lock) break;
+        }
+        lock->close_lock();
+        std::cout << "n" << i + 1 << "重新获得锁" << std::endl;
+        *state_n[i] = waiting;
+    }
+
     self_n[i]->Wait_n(lock, i); // 测试是否能拿到两只筷子
     std::cout << "n" << i + 1 << "发车\n";
-    lock->open_lock(); // 释放锁
     std::cout << "n" << i + 1 << "释放锁 " << std::endl;
+    lock->open_lock(); // 释放锁
     sleep(rate); // 开rate秒
 }
 
@@ -132,10 +163,42 @@ void dp::pickup_s(int i)
     lock->close_lock();
     std::cout << "s" << i + 1 << "获得锁 " << std::endl;
     *state_s[i] = waiting; // 尝试拿起筷子的时候就是饥饿态，不然吃不了
+
+    bool need_wait = false;
+    for (int j = 0; j < NUM; j ++ )
+    {
+        if (*state_n[j] == waiting)
+        {   
+            need_wait = true;
+            std::cout << "s" << i + 1 << "先叫醒已经在等的n" << j + 1 << std::endl;
+            self_n[j]->Signal_n(j);
+        }
+    }
+    if (need_wait)
+    {   
+        std::cout << "s" << i + 1 << "先让北车运行, 暂时释放锁" << std::endl;
+        lock->open_lock();
+        *state_s[i] = wantingLock;
+        sleep(rate);
+        while (1)
+        {
+            bool can_get_lock = true;
+            for (int j = 0; j < i; j ++ )
+            {
+                if (*state_s[j] == wantingLock)
+                    can_get_lock = false;
+            }
+            if (can_get_lock) break;
+        }
+        lock->close_lock();
+        std::cout << "s" << i + 1 << "重新获得锁" << std::endl;
+        *state_s[i] = waiting;
+    }
+
     self_s[i]->Wait_s(lock, i); // 测试是否能拿到两只筷子
     std::cout << "s" << i + 1 << "发车\n";
-    lock->open_lock(); // 释放锁
     std::cout << "s" << i + 1 << "释放锁 " << std::endl;
+    lock->open_lock(); // 释放锁
     sleep(rate); // 开rate秒
 }
 
@@ -163,12 +226,25 @@ void Condition::Wait_n(Lock *lock, int i)
         // 在进入阻塞之前先释放锁
         // 这保证了线程在等待时不会持有锁
         // 如果在睡眠的时候拿着锁不放，万一其它进程需要锁就会无法获得
-        lock->open_lock();
         std::cout << "有南车在跑, n" << i + 1 << "被阻塞, 暂时释放锁" << std::endl;
+        lock->open_lock();
         sema->down(); // 对条件变量的信号量进行down操作，用于模拟进入阻塞
+        
         // 当被唤醒时，重新获得锁
+        // 同样要确保获得锁的优先级
+        while (1)
+        {
+            bool can_get_lock = true;
+            for (int j = 0; j < i; j ++ )
+            {
+                if (*state_n[j] == wantingLock)
+                    can_get_lock = false;
+            }
+            if (can_get_lock) break;
+        }
         lock->close_lock();
         std::cout << "n" << i + 1 << "重新获得锁" << std::endl;
+        *state_n[i] = running;
     }
 }
 
@@ -195,12 +271,24 @@ void Condition::Wait_s(Lock *lock, int i)
         // 在进入阻塞之前先释放锁
         // 这保证了线程在等待时不会持有锁
         // 如果在睡眠的时候拿着锁不放，万一其它进程需要锁就会无法获得
-        lock->open_lock();
         std::cout << "有北车在跑, s" << i + 1 << "被阻塞, 暂时释放锁" << std::endl;
+        lock->open_lock();
         sema->down(); // 对条件变量的信号量进行down操作，用于模拟进入阻塞
+        
         // 当被唤醒时，重新获得锁
+        while (1)
+        {
+            bool can_get_lock = true;
+            for (int j = 0; j < i; j ++ )
+            {
+                if (*state_s[j] == wantingLock)
+                    can_get_lock = false;
+            }
+            if (can_get_lock) break;
+        }
         lock->close_lock();
         std::cout << "s" << i + 1 << "重新获得锁" << std::endl;
+        *state_s[i] = running;
     }
 }
 
@@ -209,14 +297,14 @@ void Condition::Signal_n(int i)
 {
     sema->up();
     std::cout << "n" << i + 1 << "从阻塞中被唤醒" << std::endl;
-    *state_n[i] = running;
+    *state_n[i] = wantingLock;
 }
 
 void Condition::Signal_s(int i)
 {
     sema->up();
     std::cout << "s" << i + 1 << "从阻塞中被唤醒" << std::endl;
-    *state_s[i] = running;
+    *state_s[i] = wantingLock;
 }
 
 void dp::putdown_n(int i)
@@ -261,8 +349,8 @@ void dp::putdown_n(int i)
                 self_s[j]->Signal_s(j);
         }
     }
-    lock->open_lock(); // 释放锁
     std::cout << "n" << i + 1 << "释放锁" << std::endl;
+    lock->open_lock(); // 释放锁
 }
 
 void dp::putdown_s(int i)
@@ -307,8 +395,8 @@ void dp::putdown_s(int i)
                 self_n[j]->Signal_n(j);
         }
     }
-    lock->open_lock(); // 释放锁
     std::cout << "s" << i + 1 << "释放锁" << std::endl;
+    lock->open_lock(); // 释放锁
 }
 
 int dp::set_sem(key_t sem_key, int sem_val, int sem_flg)

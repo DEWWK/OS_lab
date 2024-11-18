@@ -57,7 +57,6 @@ class Condition
     void Wait_s(Lock* lock, int i); // 阻塞操作
     void Signal_n(int i); // 唤醒操作
     void Signal_s(int i); // 唤醒操作
-  private:
     Sema* sema; // 条件变量的信号量，用于实现模拟等待和唤醒操作
     char** state_n; // 北车状态
     char** state_s; // 南车状态 
